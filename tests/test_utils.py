@@ -5,7 +5,7 @@ from unittest.mock import Mock, mock_open, patch
 import pytest
 import requests
 
-from src.utils import get_currency_rates, get_greeting, get_month_date_start_end, load_user_settings
+from src.utils import get_currency_rates, get_greeting, get_month_date_start_end, load_user_settings, get_stock_prices
 
 
 # Тесты для функц load_user)settings
@@ -163,4 +163,69 @@ def test_json_decode_error(mock_get) -> None:
     currencies = ["USD"]
     result = get_currency_rates(currencies)
 
+    assert result == []
+
+
+# Тесты для функции get_stock_prices
+@patch('requests.get')
+def test_successful_stock_prices(mock_get):
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "Global Quote": {
+            "05. price": "175.50"
+        }
+    }
+    mock_get.return_value = mock_response
+
+    result = get_stock_prices(['AAPL'], api_key='test_key')
+    assert result == [{"stock": "AAPL", "price": "175.50"}]
+    mock_get.assert_called_once_with(
+        "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=test_key"
+    )
+
+
+@patch('requests.get')
+def test_multiple_stocks(mock_get):
+    mock_response = Mock()
+    mock_response.status_code = 200
+    mock_response.json.side_effect = [
+        {"Global Quote": {"05. price": "175.50"}},
+        {"Global Quote": {"05. price": "325.45"}}
+    ]
+    mock_get.return_value = mock_response
+
+    result = get_stock_prices(['AAPL', 'MSFT'], api_key='test_key')
+    assert result == [
+        {"stock": "AAPL", "price": "175.50"},
+        {"stock": "MSFT", "price": "325.45"}
+    ]
+
+
+@patch('requests.get')
+def test_request_error(mock_get):
+    mock_response = Mock()
+    mock_response.status_code = 404
+    mock_get.return_value = mock_response
+
+    result = get_stock_prices(['AAPL'], api_key='test_key')
+    assert result == "Не успешный запрос.\nКод ошибки: 404."
+
+
+@patch('requests.get', side_effect=requests.exceptions.RequestException)
+def test_request_exception(mock_get):
+    result = get_stock_prices(['AAPL'], api_key='test_key')
+    assert result == [{"stock": "AAPL", "price": "Нет данных"}]
+
+
+@patch('requests.get')
+def test_no_api_key(mock_get):
+    result = get_stock_prices(['AAPL'])
+    mock_get.assert_called_once_with(
+        "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=None"
+    )
+
+
+def test_empty_stocks_list():
+    result = get_stock_prices([])
     assert result == []

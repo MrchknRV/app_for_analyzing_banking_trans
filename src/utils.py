@@ -94,3 +94,31 @@ def get_currency_rates(currencies: list) -> Union[list, str]:
     except Exception as ex:
         logger.error("Ошибка получения курса валют: %s", ex)
     return rates
+
+
+def get_stock_prices(stocks: list, api_key=None) -> Union[list, str]:
+    """Функция делает запросы к API Alpha Vantage для получения текущих цен
+    указанных акций. Для каждой акции возвращает последнюю известную цену."""
+    logger.info("Запуск функции %s с значением %s", get_stock_prices.__name__, stocks)
+    """Получает цены акций."""
+    prices = []
+    for stock in stocks:
+        logging.info(f"Запрос цены для акции: {stock}")
+        try:
+            logger.info("Обращение к Api")
+            response = requests.get(
+                f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={stock}&apikey={api_key}"
+            )
+            status_code = response.status_code
+            if status_code == 200:
+                data = response.json()
+                logger.info("Проверка статус-ответа")
+                price = data["Global Quote"]["05. price"]
+                prices.append({"stock": stock, "price": price})
+                logging.info(f"Успешно получена цена для {stock}")
+            else:
+                return f"Не успешный запрос.\nКод ошибки: {status_code}."
+        except requests.RequestException as ex:
+            logging.error(f"Ошибка при получении цены для {stock}: {ex}")
+            prices.append({"stock": stock, "price": "Нет данных"})
+    return prices
