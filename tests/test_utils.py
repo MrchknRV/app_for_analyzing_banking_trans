@@ -7,15 +7,8 @@ import pandas as pd
 import pytest
 import requests
 
-from src.utils import (
-    get_cards_data,
-    get_currency_rates,
-    get_filtered_operations,
-    get_greeting,
-    get_month_date_start_end,
-    get_stock_prices,
-    load_user_settings,
-)
+from src.utils import (get_cards_data, get_currency_rates, get_filtered_operations, get_greeting,
+                       get_month_date_start_end, get_stock_prices, get_top_transactions, load_user_settings)
 
 
 # Тесты для функц load_user)settings
@@ -299,3 +292,53 @@ def test_get_cards_data_exception_handling(monkeypatch):
 
     assert isinstance(result, pd.DataFrame)
     assert result.equals(test_df)
+
+
+# Тесты для функции get_top_transactions
+def test_get_top_trans_successful(sample_data):
+    result = get_top_transactions(sample_data)
+    assert len(result) == 5
+    assert isinstance(result, list)
+    assert result == [
+        {"date": "30.12.2021", "amount": -1.32, "category": "Переводы", "description": "Магнит"},
+        {"date": "29.12.2021", "amount": -35.0, "category": "Фастфуд", "description": "РЖД"},
+        {"date": "29.12.2021", "amount": -35.0, "category": "Каршеринг", "description": "РЖД"},
+        {"date": "31.12.2021", "amount": -78.05, "category": "Супермаркеты", "description": "Ситидрайв"},
+        {"date": "26.12.2021", "amount": -100.2, "category": "Константин Л.", "description": "Ozon.ru"},
+    ]
+
+
+def test_get_top_trans_custom_quant(sample_data):
+    result = get_top_transactions(sample_data, 3)
+    assert len(result) == 3
+    assert isinstance(result, list)
+    assert result == [
+        {"date": "30.12.2021", "amount": -1.32, "category": "Переводы", "description": "Магнит"},
+        {"date": "29.12.2021", "amount": -35.0, "category": "Фастфуд", "description": "РЖД"},
+        {"date": "29.12.2021", "amount": -35.0, "category": "Каршеринг", "description": "РЖД"},
+    ]
+
+
+def test_get_top_transactions_empty_data():
+    df = pd.DataFrame(columns=["Дата операции", "Сумма операции", "Категория", "Описание"])
+    result = get_top_transactions(df)
+    assert result == []
+
+
+def test_get_top_transactions_exception_handling(monkeypatch):
+    df = pd.DataFrame({"Дата операции": [datetime(2021, 1, 1)], "Сумма операции": ["should_be_numeric"]})
+    result = get_top_transactions(df)
+    assert result == []
+
+
+def test_get_top_transactions_equal_amounts():
+    df = pd.DataFrame(
+        {
+            "Дата операции": [datetime(2021, 1, 1), datetime(2021, 1, 2)],
+            "Сумма операции": [100.0, 100.0],
+            "Категория": ["test1", "test2"],
+            "Описание": ["desc1", "desc2"],
+        }
+    )
+    result = get_top_transactions(df, quant=1)
+    assert len(result) == 1

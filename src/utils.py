@@ -165,3 +165,25 @@ def get_cards_data(data: pd.DataFrame) -> Union[list, pd.DataFrame]:
     except Exception as ex:
         logging.error("Ошибка получения данных: %s. Возврат данных", ex)
         return data
+
+
+def get_top_transactions(data, quant=5):
+    logger.info("Запуск функции %s", get_top_transactions.__name__)
+    try:
+        logger.info("Получение данных")
+        top_data = data.nlargest(quant, "Сумма операции")
+        top_operations = []
+        for _, row in top_data.iterrows():
+            top_operations.append(
+                {
+                    "date": row["Дата операции"].strftime("%d.%m.%Y"),
+                    "amount": round(row["Сумма операции"], 2),
+                    "category": row["Категория"],
+                    "description": row["Описание"],
+                }
+            )
+            logger.info("Данные получены")
+        return top_operations
+    except Exception as ex:
+        logging.error("Ошибка получения данных: %s", ex)
+        return []
