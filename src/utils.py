@@ -114,6 +114,7 @@ def get_stock_prices(stocks: list, api_key=None) -> Any:
                 continue
 
             data = response.json()
+            print(data)
             if "Global Quote" not in data or "05. price" not in data["Global Quote"]:
                 logger.error("Неверная структура ответа для %s", stock)
                 prices.append({"stock": stock, "price": "Нет данных"})

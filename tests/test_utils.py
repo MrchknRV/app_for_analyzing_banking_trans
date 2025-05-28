@@ -1,12 +1,13 @@
 import json
 from datetime import datetime
 from unittest.mock import Mock, mock_open, patch
-from config import PATH
+
 import numpy as np
 import pandas as pd
 import pytest
 import requests
 
+from config import PATH
 from src.utils import (get_cards_data, get_currency_rates, get_filtered_operations, get_greeting,
                        get_month_date_start_end, get_stock_prices, get_top_transactions, load_user_settings)
 
@@ -172,72 +173,57 @@ def test_json_decode_error(mock_get) -> None:
 
 # Тесты для функции get_stock_prices
 def test_successful_single_stock(mock_success_response):
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = Mock(
-            status_code=200,
-            json=lambda: mock_success_response
-        )
-        result = get_stock_prices(['AAPL'], api_key='test_key')
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=200, json=lambda: mock_success_response)
+        result = get_stock_prices(["AAPL"], api_key="test_key")
 
         assert isinstance(result, list)
         assert len(result) == 1
-        assert result[0]['stock'] == 'AAPL'
-        assert result[0]['price'] == 150.25
+        assert result[0]["stock"] == "AAPL"
+        assert result[0]["price"] == 150.25
 
 
 def test_multiple_stocks(mock_success_response):
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = Mock(
-            status_code=200,
-            json=lambda: mock_success_response
-        )
-        stocks = ['AAPL', 'MSFT', 'GOOG']
-        result = get_stock_prices(stocks, api_key='test_key')
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=200, json=lambda: mock_success_response)
+        stocks = ["AAPL", "MSFT", "GOOG"]
+        result = get_stock_prices(stocks, api_key="test_key")
 
         assert len(result) == 3
-        assert all(item['price'] == 150.25 for item in result)
-        assert {item['stock'] for item in result} == set(stocks)
+        assert all(item["price"] == 150.25 for item in result)
+        assert {item["stock"] for item in result} == set(stocks)
 
 
 def test_api_failure(mock_failed_response):
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = Mock(
-            status_code=200,
-            json=lambda: mock_failed_response
-        )
-        result = get_stock_prices(['AAPL'], api_key='test_key')
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=200, json=lambda: mock_failed_response)
+        result = get_stock_prices(["AAPL"], api_key="test_key")
 
         assert len(result) == 1
-        assert result[0]['stock'] == 'AAPL'
-        assert result[0]['price'] == "Нет данных"
+        assert result[0]["stock"] == "AAPL"
+        assert result[0]["price"] == "Нет данных"
 
 
 def test_http_error():
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = Mock(
-            status_code=404,
-            json=lambda: {}
-        )
-        result = get_stock_prices(['AAPL'], api_key='test_key')
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=404, json=lambda: {})
+        result = get_stock_prices(["AAPL"], api_key="test_key")
 
         assert len(result) == 1
-        assert result[0]['price'] == "Нет данных"
+        assert result[0]["price"] == "Нет данных"
 
 
 def test_empty_stocks_list():
-    result = get_stock_prices([], api_key='test_key')
+    result = get_stock_prices([], api_key="test_key")
     assert result == []
 
 
 def test_missing_global_quote():
-    with patch('requests.get') as mock_get:
-        mock_get.return_value = Mock(
-            status_code=200,
-            json=lambda: {"invalid": "response"}
-        )
-        result = get_stock_prices(['AAPL'], api_key='test_key')
+    with patch("requests.get") as mock_get:
+        mock_get.return_value = Mock(status_code=200, json=lambda: {"invalid": "response"})
+        result = get_stock_prices(["AAPL"], api_key="test_key")
 
-        assert result[0]['price'] == "Нет данных"
+        assert result[0]["price"] == "Нет данных"
 
 
 # Тесты для фукнции get_filtered_operations
