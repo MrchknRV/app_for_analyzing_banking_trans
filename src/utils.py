@@ -6,7 +6,7 @@ from typing import Any, Union
 import pandas as pd
 import requests
 
-from config import JSON_PATH, PATH
+from config import PATH
 
 logger = logging.getLogger(__name__)
 file_handler = logging.FileHandler(PATH / "logs" / "logging.log", "w", encoding="UTF-8")
@@ -24,8 +24,8 @@ def load_user_settings() -> dict:
     logger.info("Запуск функции %s", load_user_settings.__name__)
     try:
         logger.info("Получение данных из 'user_settings.json'")
-        with open(JSON_PATH, "r", encoding="UTF-8") as f:
-            logger.info("Данные успешно получены из %s", JSON_PATH)
+        with open(PATH / "user_settings.json", "r", encoding="UTF-8") as f:
+            logger.info("Данные успешно получены")
             return json.load(f)
     except Exception as ex:
         logger.error("Ошибка загрузки %s", ex)
@@ -38,7 +38,7 @@ def get_greeting(date_str: str) -> str:
     logger.info("Запуск функции %s с значением %s", get_greeting.__name__, date_str)
     try:
         logger.info("Получение даты")
-        date_obj = datetime.strptime(date_str, "%d.%m.%Y %H:%M:%S")
+        date_obj = datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
     except ValueError:
         logger.error("Неверный формат даты, используется текущая дата")
         date_obj = datetime.now()
@@ -96,30 +96,39 @@ def get_currency_rates(currencies: list) -> Union[list, str]:
     return rates
 
 
-def get_stock_prices(stocks: list, api_key=None) -> Union[list, str]:
+def get_stock_prices(stocks: list, api_key=None) -> Any:
     """Функция делает запросы к API Alpha Vantage для получения текущих цен
     указанных акций. Для каждой акции возвращает последнюю известную цену."""
     logger.info("Запуск функции %s с значением %s", get_stock_prices.__name__, stocks)
-    """Получает цены акций."""
     prices = []
     for stock in stocks:
-        logging.info(f"Запрос цены для акции: {stock}")
+        logger.info(f"Запрос цены для акции: {stock}")
         try:
             logger.info("Обращение к Api")
             response = requests.get(
                 f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={stock}&apikey={api_key}"
             )
-            status_code = response.status_code
-            if status_code == 200:
-                data = response.json()
-                logger.info("Проверка статус-ответа")
-                price = data["Global Quote"]["05. price"]
+            if response.status_code != 200:
+                logger.error("Ошибка запроса для %s. Код: %d", stock, response.status_code)
+                prices.append({"stock": stock, "price": "Нет данных"})
+                continue
+
+            data = response.json()
+            if "Global Quote" not in data or "05. price" not in data["Global Quote"]:
+                logger.error("Неверная структура ответа для %s", stock)
+                prices.append({"stock": stock, "price": "Нет данных"})
+                continue
+
+            try:
+                price = float(data["Global Quote"]["05. price"])
                 prices.append({"stock": stock, "price": price})
-                logging.info(f"Успешно получена цена для {stock}")
-            else:
-                return f"Не успешный запрос.\nКод ошибки: {status_code}."
+                logger.info("Успешно получена цена для %s: %.2f", stock, price)
+            except (ValueError, TypeError) as ex:
+                logger.error("Ошибка преобразования цены для %s: %s", stock, ex)
+                prices.append({"stock": stock, "price": "Нет данных"})
+
         except requests.RequestException as ex:
-            logging.error(f"Ошибка при получении цены для {stock}: {ex}")
+            logger.error(f"Ошибка при получении цены для {stock}: {ex}")
             prices.append({"stock": stock, "price": "Нет данных"})
     return prices
 

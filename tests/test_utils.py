@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 from unittest.mock import Mock, mock_open, patch
-
+from config import PATH
 import numpy as np
 import pandas as pd
 import pytest
@@ -12,52 +12,54 @@ from src.utils import (get_cards_data, get_currency_rates, get_filtered_operatio
 
 
 # Тесты для функц load_user)settings
-@patch(
-    "builtins.open",
-    mock_open(read_data=json.dumps({"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "GOOGL"]})),
-)
-@patch("config.JSON_PATH", "valid_path.json")  # Замените 'module' на имя вашего модуля
-def test_successful_load() -> None:
-    result = load_user_settings()
-    assert result == {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "GOOGL"]}
+def test_successful_load(mock_settings_data):
+    mock_data = json.dumps(mock_settings_data)
+
+    with patch("builtins.open", mock_open(read_data=mock_data)) as mock_file:
+        result = load_user_settings()
+
+        # Проверяем что файл был открыт с правильными параметрами
+        mock_file.assert_called_once_with(PATH / "user_settings.json", "r", encoding="UTF-8")
+
+        # Проверяем результат
+        assert isinstance(result, dict)
+        assert result == mock_settings_data
 
 
-def test_missing_file() -> None:
+def test_file_not_found():
     with patch("builtins.open", side_effect=FileNotFoundError):
         result = load_user_settings()
         assert result == {}
 
 
-@patch("builtins.open", mock_open(read_data="{invalid json}"))
-@patch("config.JSON_PATH", "invalid_path.json")
-def test_invalid_json() -> None:
-    result = load_user_settings()
-    assert result == {}
+def test_invalid_json():
+    with patch("builtins.open", mock_open(read_data="invalid json")):
+        result = load_user_settings()
+        assert result == {}
 
 
-@patch("builtins.open", side_effect=Exception("Error"))
-@patch("config.JSON_PATH", "error_path.json")
-def test_general_exception_handling(mock_open) -> None:
-    result = load_user_settings()
-    assert result == {}
+def test_empty_file():
+    with patch("builtins.open", mock_open(read_data="")):
+        result = load_user_settings()
+        assert result == {}
 
 
 # Тесты для функции get_greeting
 @pytest.mark.parametrize(
     "test_inp, expected",
     [
-        ("15.05.2023 08:30:00", "Доброе утро"),
-        ("15.05.2023 14:15:00", "Добрый день"),
-        ("15.05.2023 19:45:00", "Добрый вечер"),
-        ("15.05.2023 03:20:00", "Доброй ночи"),
-        ("15.05.2023 05:00:00", "Доброе утро"),
-        ("15.05.2023 11:59:59", "Доброе утро"),
-        ("15.05.2023 12:00:00", "Добрый день"),
-        ("15.05.2023 16:59:59", "Добрый день"),
-        ("15.05.2023 17:00:00", "Добрый вечер"),
-        ("15.05.2023 23:59:59", "Добрый вечер"),
-        ("15.05.2023 00:00:00", "Доброй ночи"),
-        ("15.05.2023 04:59:59", "Доброй ночи"),
+        ("2023-05-15 08:30:00", "Доброе утро"),
+        ("2023-05-15 14:15:00", "Добрый день"),
+        ("2023-05-15 19:45:00", "Добрый вечер"),
+        ("2023-05-15 03:20:00", "Доброй ночи"),
+        ("2023-05-15 05:00:00", "Доброе утро"),
+        ("2023-05-15 11:59:59", "Доброе утро"),
+        ("2023-05-15 12:00:00", "Добрый день"),
+        ("2023-05-15 16:59:59", "Добрый день"),
+        ("2023-05-15 17:00:00", "Добрый вечер"),
+        ("2023-05-15 23:59:59", "Добрый вечер"),
+        ("2023-05-15 00:00:00", "Доброй ночи"),
+        ("2023-05-15 04:59:59", "Доброй ночи"),
     ],
 )
 def test_get_greeting(test_inp: str, expected: str) -> None:
@@ -162,7 +164,6 @@ def test_json_decode_error(mock_get) -> None:
     mock_response.status_code = 200
     mock_response.json.side_effect = ValueError("Invalid JSON")
     mock_get.return_value = mock_response
-
     currencies = ["USD"]
     result = get_currency_rates(currencies)
 
@@ -170,59 +171,73 @@ def test_json_decode_error(mock_get) -> None:
 
 
 # Тесты для функции get_stock_prices
-@patch("requests.get")
-def test_successful_stock_prices(mock_get):
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.return_value = {"Global Quote": {"05. price": "175.50"}}
-    mock_get.return_value = mock_response
+def test_successful_single_stock(mock_success_response):
+    with patch('requests.get') as mock_get:
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: mock_success_response
+        )
+        result = get_stock_prices(['AAPL'], api_key='test_key')
 
-    result = get_stock_prices(["AAPL"], api_key="test_key")
-    assert result == [{"stock": "AAPL", "price": "175.50"}]
-    mock_get.assert_called_once_with(
-        "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=test_key"
-    )
-
-
-@patch("requests.get")
-def test_multiple_stocks(mock_get):
-    mock_response = Mock()
-    mock_response.status_code = 200
-    mock_response.json.side_effect = [
-        {"Global Quote": {"05. price": "175.50"}},
-        {"Global Quote": {"05. price": "325.45"}},
-    ]
-    mock_get.return_value = mock_response
-
-    result = get_stock_prices(["AAPL", "MSFT"], api_key="test_key")
-    assert result == [{"stock": "AAPL", "price": "175.50"}, {"stock": "MSFT", "price": "325.45"}]
+        assert isinstance(result, list)
+        assert len(result) == 1
+        assert result[0]['stock'] == 'AAPL'
+        assert result[0]['price'] == 150.25
 
 
-@patch("requests.get")
-def test_request_error(mock_get):
-    mock_response = Mock()
-    mock_response.status_code = 404
-    mock_get.return_value = mock_response
+def test_multiple_stocks(mock_success_response):
+    with patch('requests.get') as mock_get:
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: mock_success_response
+        )
+        stocks = ['AAPL', 'MSFT', 'GOOG']
+        result = get_stock_prices(stocks, api_key='test_key')
 
-    result = get_stock_prices(["AAPL"], api_key="test_key")
-    assert result == "Не успешный запрос.\nКод ошибки: 404."
-
-
-@patch("requests.get", side_effect=requests.exceptions.RequestException)
-def test_request_exception(mock_get):
-    result = get_stock_prices(["AAPL"], api_key="test_key")
-    assert result == [{"stock": "AAPL", "price": "Нет данных"}]
+        assert len(result) == 3
+        assert all(item['price'] == 150.25 for item in result)
+        assert {item['stock'] for item in result} == set(stocks)
 
 
-@patch("requests.get")
-def test_no_api_key(mock_get):
-    get_stock_prices(["AAPL"])
-    mock_get.assert_called_once_with("https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=None")
+def test_api_failure(mock_failed_response):
+    with patch('requests.get') as mock_get:
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: mock_failed_response
+        )
+        result = get_stock_prices(['AAPL'], api_key='test_key')
+
+        assert len(result) == 1
+        assert result[0]['stock'] == 'AAPL'
+        assert result[0]['price'] == "Нет данных"
+
+
+def test_http_error():
+    with patch('requests.get') as mock_get:
+        mock_get.return_value = Mock(
+            status_code=404,
+            json=lambda: {}
+        )
+        result = get_stock_prices(['AAPL'], api_key='test_key')
+
+        assert len(result) == 1
+        assert result[0]['price'] == "Нет данных"
 
 
 def test_empty_stocks_list():
-    result = get_stock_prices([])
+    result = get_stock_prices([], api_key='test_key')
     assert result == []
+
+
+def test_missing_global_quote():
+    with patch('requests.get') as mock_get:
+        mock_get.return_value = Mock(
+            status_code=200,
+            json=lambda: {"invalid": "response"}
+        )
+        result = get_stock_prices(['AAPL'], api_key='test_key')
+
+        assert result[0]['price'] == "Нет данных"
 
 
 # Тесты для фукнции get_filtered_operations

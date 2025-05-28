@@ -5,6 +5,23 @@ import pytest
 
 
 @pytest.fixture
+def mock_settings_data():
+    return {
+        "user_currencies": [
+            "USD",
+            "EUR"
+        ],
+        "user_stocks": [
+            "AAPL",
+            "AMZN",
+            "GOOGL",
+            "MSFT",
+            "TSLA"
+        ]
+    }
+
+
+@pytest.fixture
 def sample_data():
     data = {
         "Дата операции": [
@@ -41,3 +58,19 @@ def sample_data():
         ],
     }
     return pd.DataFrame(data)
+
+
+@pytest.fixture
+def mock_success_response():
+    return {
+        "Global Quote": {
+            "05. price": "150.25"
+        }
+    }
+
+
+@pytest.fixture
+def mock_failed_response():
+    return {
+        "Error Message": "Invalid API call"
+    }
