@@ -2,12 +2,13 @@ import json
 from datetime import datetime
 from unittest.mock import Mock, mock_open, patch
 
+import numpy as np
 import pandas as pd
 import pytest
 import requests
-from numpy.f2py.auxfuncs import isunsigned
 
 from src.utils import (
+    get_cards_data,
     get_currency_rates,
     get_filtered_operations,
     get_greeting,
@@ -222,7 +223,7 @@ def test_request_exception(mock_get):
 
 @patch("requests.get")
 def test_no_api_key(mock_get):
-    result = get_stock_prices(["AAPL"])
+    get_stock_prices(["AAPL"])
     mock_get.assert_called_once_with("https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=None")
 
 
@@ -261,3 +262,40 @@ def test_filter_with_empty_data():
     # Проверяем, что возвращен пустой DataFrame
     assert len(result) == 0
     assert isinstance(result, pd.DataFrame)
+
+
+# Тесты для функции get_cards_data
+def test_get_cards_data_successful(sample_data):
+    result = get_cards_data(sample_data)
+    assert len(result) == 3
+    assert result == [
+        {"last_digits": "7197", "total_spent": -79.37, "cashback": -1.0},
+        {"last_digits": "5091", "total_spent": -21511.6, "cashback": -216.0},
+        {"last_digits": "4556", "total_spent": -670.0, "cashback": -7.0},
+    ]
+    assert isinstance(result, list)
+
+
+def test_get_cards_data_empty():
+    empty_df = pd.DataFrame(columns=["Номер карты", "Сумма операции"])
+    result = get_cards_data(empty_df)
+    assert result == []
+
+
+def test_get_cards_data_with_nan():
+    nan_df = pd.DataFrame({"Номер карты": [np.nan, np.nan], "Сумма операции": [100, 200]})
+    result = get_cards_data(nan_df)
+    assert result == []
+
+
+def test_get_cards_data_exception_handling(monkeypatch):
+    def mock_unique(*args, **kwargs):
+        raise Exception("error")
+
+    monkeypatch.setattr(pd.Series, "unique", mock_unique)
+
+    test_df = pd.DataFrame({"Номер карты": ["*7197"], "Сумма операции": [100]})
+    result = get_cards_data(test_df)
+
+    assert isinstance(result, pd.DataFrame)
+    assert result.equals(test_df)

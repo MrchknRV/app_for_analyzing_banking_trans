@@ -125,11 +125,43 @@ def get_stock_prices(stocks: list, api_key=None) -> Union[list, str]:
 
 
 def get_filtered_operations(data: pd.DataFrame, date_str: str) -> pd.DataFrame:
+    """Функция принимает DataFrame с операциями и строку с датой, возвращает отфильтрованный
+    DataFrame, содержащий только операции за указанный месяц."""
     logger.info("Запуск функции %s", get_filtered_operations.__name__)
     try:
         date_start, date_end = get_month_date_start_end(date_str)
         filtered_df = data[(data["Дата операции"] >= date_start) & (data["Дата операции"] <= date_end)]
         return filtered_df
     except Exception as ex:
-        logging.error(f"Ошибка фильтрации: %s. Возврат данных", ex)
+        logging.error("Ошибка фильтрации: %s. Возврат данных", ex)
+        return data
+
+
+def get_cards_data(data: pd.DataFrame) -> Union[list, pd.DataFrame]:
+    """Агрегирует данные по банковским картам из DataFrame, вычисляя общие траты и кэшбэк.
+    Обрабатывает DataFrame с транзакциями, группирует операции по номерам карт (игнорируя NaN),
+    и возвращает список словарей с информацией по каждой карте: последние цифры номера,
+    суммарные траты и рассчитанный кэшбэк"""
+    logger.info("Запуск функции %s", get_cards_data.__name__)
+    try:
+        logger.info("Получение данных")
+        cards = []
+        for card in data["Номер карты"].unique():
+            if pd.isna(card):
+                continue
+            last_digits = card[1:]
+            card_data = data[data["Номер карты"] == card]
+            total_spent = card_data["Сумма операции"].sum()
+            cashback = total_spent // 100
+            cards.append(
+                {
+                    "last_digits": last_digits,
+                    "total_spent": float(round(total_spent, 2)),
+                    "cashback": float(round(cashback, 2)),
+                }
+            )
+            logger.info("Данные получены")
+        return cards
+    except Exception as ex:
+        logging.error("Ошибка получения данных: %s. Возврат данных", ex)
         return data
