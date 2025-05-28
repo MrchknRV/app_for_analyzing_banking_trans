@@ -2,10 +2,19 @@ import json
 from datetime import datetime
 from unittest.mock import Mock, mock_open, patch
 
+import pandas as pd
 import pytest
 import requests
+from numpy.f2py.auxfuncs import isunsigned
 
-from src.utils import get_currency_rates, get_greeting, get_month_date_start_end, load_user_settings, get_stock_prices
+from src.utils import (
+    get_currency_rates,
+    get_filtered_operations,
+    get_greeting,
+    get_month_date_start_end,
+    get_stock_prices,
+    load_user_settings,
+)
 
 
 # Тесты для функц load_user)settings
@@ -167,65 +176,88 @@ def test_json_decode_error(mock_get) -> None:
 
 
 # Тесты для функции get_stock_prices
-@patch('requests.get')
+@patch("requests.get")
 def test_successful_stock_prices(mock_get):
     mock_response = Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        "Global Quote": {
-            "05. price": "175.50"
-        }
-    }
+    mock_response.json.return_value = {"Global Quote": {"05. price": "175.50"}}
     mock_get.return_value = mock_response
 
-    result = get_stock_prices(['AAPL'], api_key='test_key')
+    result = get_stock_prices(["AAPL"], api_key="test_key")
     assert result == [{"stock": "AAPL", "price": "175.50"}]
     mock_get.assert_called_once_with(
         "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=test_key"
     )
 
 
-@patch('requests.get')
+@patch("requests.get")
 def test_multiple_stocks(mock_get):
     mock_response = Mock()
     mock_response.status_code = 200
     mock_response.json.side_effect = [
         {"Global Quote": {"05. price": "175.50"}},
-        {"Global Quote": {"05. price": "325.45"}}
+        {"Global Quote": {"05. price": "325.45"}},
     ]
     mock_get.return_value = mock_response
 
-    result = get_stock_prices(['AAPL', 'MSFT'], api_key='test_key')
-    assert result == [
-        {"stock": "AAPL", "price": "175.50"},
-        {"stock": "MSFT", "price": "325.45"}
-    ]
+    result = get_stock_prices(["AAPL", "MSFT"], api_key="test_key")
+    assert result == [{"stock": "AAPL", "price": "175.50"}, {"stock": "MSFT", "price": "325.45"}]
 
 
-@patch('requests.get')
+@patch("requests.get")
 def test_request_error(mock_get):
     mock_response = Mock()
     mock_response.status_code = 404
     mock_get.return_value = mock_response
 
-    result = get_stock_prices(['AAPL'], api_key='test_key')
+    result = get_stock_prices(["AAPL"], api_key="test_key")
     assert result == "Не успешный запрос.\nКод ошибки: 404."
 
 
-@patch('requests.get', side_effect=requests.exceptions.RequestException)
+@patch("requests.get", side_effect=requests.exceptions.RequestException)
 def test_request_exception(mock_get):
-    result = get_stock_prices(['AAPL'], api_key='test_key')
+    result = get_stock_prices(["AAPL"], api_key="test_key")
     assert result == [{"stock": "AAPL", "price": "Нет данных"}]
 
 
-@patch('requests.get')
+@patch("requests.get")
 def test_no_api_key(mock_get):
-    result = get_stock_prices(['AAPL'])
-    mock_get.assert_called_once_with(
-        "https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=None"
-    )
+    result = get_stock_prices(["AAPL"])
+    mock_get.assert_called_once_with("https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=AAPL&apikey=None")
 
 
 def test_empty_stocks_list():
     result = get_stock_prices([])
     assert result == []
+
+
+# Тесты для фукнции get_filtered_operations
+def test_successful_filter(sample_data):
+    date = "2021-12-29 19:06:39"
+    result = get_filtered_operations(sample_data, date)
+
+    assert len(result) == 4
+    assert isinstance(result, pd.DataFrame)
+
+
+def test_filter_empty_result(sample_data):
+    result = get_filtered_operations(sample_data, "2022-01-01")
+
+    assert len(result) == 0
+    assert isinstance(result, pd.DataFrame)
+
+
+def test_invalid_date_format(sample_data):
+    invalid_date = "2021/12"
+
+    result = get_filtered_operations(sample_data, invalid_date)
+    assert len(result) == 0
+
+
+def test_filter_with_empty_data():
+    empty_df = pd.DataFrame(columns=["Дата операции", "Сумма операции", "Категория"])
+    result = get_filtered_operations(empty_df, "2021-12")
+
+    # Проверяем, что возвращен пустой DataFrame
+    assert len(result) == 0
+    assert isinstance(result, pd.DataFrame)

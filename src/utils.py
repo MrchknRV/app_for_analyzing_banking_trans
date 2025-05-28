@@ -25,7 +25,7 @@ def load_user_settings() -> dict:
     try:
         logger.info("Получение данных из 'user_settings.json'")
         with open(JSON_PATH, "r", encoding="UTF-8") as f:
-            logger.info('Данные успешно получены из %s', JSON_PATH)
+            logger.info("Данные успешно получены из %s", JSON_PATH)
             return json.load(f)
     except Exception as ex:
         logger.error("Ошибка загрузки %s", ex)
@@ -122,3 +122,14 @@ def get_stock_prices(stocks: list, api_key=None) -> Union[list, str]:
             logging.error(f"Ошибка при получении цены для {stock}: {ex}")
             prices.append({"stock": stock, "price": "Нет данных"})
     return prices
+
+
+def get_filtered_operations(data: pd.DataFrame, date_str: str) -> pd.DataFrame:
+    logger.info("Запуск функции %s", get_filtered_operations.__name__)
+    try:
+        date_start, date_end = get_month_date_start_end(date_str)
+        filtered_df = data[(data["Дата операции"] >= date_start) & (data["Дата операции"] <= date_end)]
+        return filtered_df
+    except Exception as ex:
+        logging.error(f"Ошибка фильтрации: %s. Возврат данных", ex)
+        return data
