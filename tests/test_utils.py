@@ -13,33 +13,31 @@ from src.utils import (get_cards_data, get_currency_rates, get_filtered_operatio
 
 
 # Тесты для функц load_user)settings
-def test_successful_load(mock_settings_data):
+def test_successful_load(mock_settings_data: dict) -> None:
     mock_data = json.dumps(mock_settings_data)
 
     with patch("builtins.open", mock_open(read_data=mock_data)) as mock_file:
         result = load_user_settings()
 
-        # Проверяем что файл был открыт с правильными параметрами
         mock_file.assert_called_once_with(PATH / "user_settings.json", "r", encoding="UTF-8")
 
-        # Проверяем результат
         assert isinstance(result, dict)
         assert result == mock_settings_data
 
 
-def test_file_not_found():
+def test_file_not_found() -> None:
     with patch("builtins.open", side_effect=FileNotFoundError):
         result = load_user_settings()
         assert result == {}
 
 
-def test_invalid_json():
+def test_invalid_json() -> None:
     with patch("builtins.open", mock_open(read_data="invalid json")):
         result = load_user_settings()
         assert result == {}
 
 
-def test_empty_file():
+def test_empty_file() -> None:
     with patch("builtins.open", mock_open(read_data="")):
         result = load_user_settings()
         assert result == {}
@@ -172,7 +170,7 @@ def test_json_decode_error(mock_get) -> None:
 
 
 # Тесты для функции get_stock_prices
-def test_successful_single_stock(mock_success_response):
+def test_successful_single_stock(mock_success_response: dict) -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=200, json=lambda: mock_success_response)
         result = get_stock_prices(["AAPL"], api_key="test_key")
@@ -183,7 +181,7 @@ def test_successful_single_stock(mock_success_response):
         assert result[0]["price"] == 150.25
 
 
-def test_multiple_stocks(mock_success_response):
+def test_multiple_stocks(mock_success_response: dict) -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=200, json=lambda: mock_success_response)
         stocks = ["AAPL", "MSFT", "GOOG"]
@@ -194,7 +192,7 @@ def test_multiple_stocks(mock_success_response):
         assert {item["stock"] for item in result} == set(stocks)
 
 
-def test_api_failure(mock_failed_response):
+def test_api_failure(mock_failed_response: dict) -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=200, json=lambda: mock_failed_response)
         result = get_stock_prices(["AAPL"], api_key="test_key")
@@ -204,7 +202,7 @@ def test_api_failure(mock_failed_response):
         assert result[0]["price"] == "Нет данных"
 
 
-def test_http_error():
+def test_http_error() -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=404, json=lambda: {})
         result = get_stock_prices(["AAPL"], api_key="test_key")
@@ -213,12 +211,12 @@ def test_http_error():
         assert result[0]["price"] == "Нет данных"
 
 
-def test_empty_stocks_list():
+def test_empty_stocks_list() -> None:
     result = get_stock_prices([], api_key="test_key")
     assert result == []
 
 
-def test_missing_global_quote():
+def test_missing_global_quote() -> None:
     with patch("requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=200, json=lambda: {"invalid": "response"})
         result = get_stock_prices(["AAPL"], api_key="test_key")
@@ -227,7 +225,7 @@ def test_missing_global_quote():
 
 
 # Тесты для фукнции get_filtered_operations
-def test_successful_filter(sample_data):
+def test_successful_filter(sample_data: pd.DataFrame) -> None:
     date = "2021-12-29 19:06:39"
     result = get_filtered_operations(sample_data, date)
 
@@ -235,21 +233,21 @@ def test_successful_filter(sample_data):
     assert isinstance(result, pd.DataFrame)
 
 
-def test_filter_empty_result(sample_data):
+def test_filter_empty_result(sample_data: pd.DataFrame) -> None:
     result = get_filtered_operations(sample_data, "2022-01-01")
 
     assert len(result) == 0
     assert isinstance(result, pd.DataFrame)
 
 
-def test_invalid_date_format(sample_data):
+def test_invalid_date_format(sample_data: pd.DataFrame) -> None:
     invalid_date = "2021/12"
 
     result = get_filtered_operations(sample_data, invalid_date)
     assert len(result) == 0
 
 
-def test_filter_with_empty_data():
+def test_filter_with_empty_data() -> None:
     empty_df = pd.DataFrame(columns=["Дата операции", "Сумма операции", "Категория"])
     result = get_filtered_operations(empty_df, "2021-12")
 
@@ -259,7 +257,7 @@ def test_filter_with_empty_data():
 
 
 # Тесты для функции get_cards_data
-def test_get_cards_data_successful(sample_data):
+def test_get_cards_data_successful(sample_data: pd.DataFrame) -> None:
     result = get_cards_data(sample_data)
     assert len(result) == 3
     assert result == [
@@ -270,19 +268,19 @@ def test_get_cards_data_successful(sample_data):
     assert isinstance(result, list)
 
 
-def test_get_cards_data_empty():
+def test_get_cards_data_empty() -> None:
     empty_df = pd.DataFrame(columns=["Номер карты", "Сумма операции"])
     result = get_cards_data(empty_df)
     assert result == []
 
 
-def test_get_cards_data_with_nan():
+def test_get_cards_data_with_nan() -> None:
     nan_df = pd.DataFrame({"Номер карты": [np.nan, np.nan], "Сумма операции": [100, 200]})
     result = get_cards_data(nan_df)
     assert result == []
 
 
-def test_get_cards_data_exception_handling(monkeypatch):
+def test_get_cards_data_exception_handling(monkeypatch) -> None:
     def mock_unique(*args, **kwargs):
         raise Exception("error")
 
@@ -296,7 +294,7 @@ def test_get_cards_data_exception_handling(monkeypatch):
 
 
 # Тесты для функции get_top_transactions
-def test_get_top_trans_successful(sample_data):
+def test_get_top_trans_successful(sample_data: pd.DataFrame) -> None:
     result = get_top_transactions(sample_data)
     assert len(result) == 5
     assert isinstance(result, list)
@@ -309,7 +307,7 @@ def test_get_top_trans_successful(sample_data):
     ]
 
 
-def test_get_top_trans_custom_quant(sample_data):
+def test_get_top_trans_custom_quant(sample_data: pd.DataFrame) -> None:
     result = get_top_transactions(sample_data, 3)
     assert len(result) == 3
     assert isinstance(result, list)
@@ -320,19 +318,19 @@ def test_get_top_trans_custom_quant(sample_data):
     ]
 
 
-def test_get_top_transactions_empty_data():
+def test_get_top_transactions_empty_data() -> None:
     df = pd.DataFrame(columns=["Дата операции", "Сумма операции", "Категория", "Описание"])
     result = get_top_transactions(df)
     assert result == []
 
 
-def test_get_top_transactions_exception_handling(monkeypatch):
+def test_get_top_transactions_exception_handling(monkeypatch) -> None:
     df = pd.DataFrame({"Дата операции": [datetime(2021, 1, 1)], "Сумма операции": ["should_be_numeric"]})
     result = get_top_transactions(df)
     assert result == []
 
 
-def test_get_top_transactions_equal_amounts():
+def test_get_top_transactions_equal_amounts() -> None:
     df = pd.DataFrame(
         {
             "Дата операции": [datetime(2021, 1, 1), datetime(2021, 1, 2)],
