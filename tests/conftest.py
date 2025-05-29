@@ -1,0 +1,87 @@
+from datetime import datetime
+
+import pandas as pd
+import pytest
+
+
+@pytest.fixture
+def mock_settings_data() -> dict:
+    return {"user_currencies": ["USD", "EUR"], "user_stocks": ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"]}
+
+
+@pytest.fixture
+def valid_excel_data() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Дата операции": ["2023-01-01", "2023-01-02"],
+            "Сумма операции": [100.50, -200.75],
+            "Категория": ["Супермаркеты", "Канцтовары"],
+        }
+    )
+
+
+@pytest.fixture
+def invalid_excel_data() -> pd.DataFrame:
+    return pd.DataFrame({"Дата": ["2023-01-01"], "Amount": [100.50]})
+
+
+@pytest.fixture
+def sample_data() -> pd.DataFrame:
+    data = {
+        "Дата операции": [
+            datetime(2021, 12, 31, 0, 12, 53),
+            datetime(2021, 12, 30, 2, 2, 0),
+            datetime(2021, 12, 30, 19, 18, 22),
+            datetime(2021, 12, 30, 19, 6, 39),
+            datetime(2021, 12, 29, 16, 22, 8),
+            datetime(2021, 12, 29, 14, 15, 35),
+            datetime(2021, 12, 28, 18, 24, 24),
+            datetime(2021, 12, 26, 13, 50, 58),
+        ],
+        "Номер карты": ["*7197", "*5091", "*7197", "*5091", "*4556", "*4556", "*4556", "*5091"],
+        "Сумма операции": [-78.05, -20000, -1.32, -1411.4, -35, -35, -600, -100.2],
+        "Описание": [
+            "Ситидрайв",
+            "Ситидрайв",
+            "Магнит",
+            "Пополнение через Газпромбанк",
+            "РЖД",
+            "РЖД",
+            "Rumyanyj Khleb",
+            "Ozon.ru",
+        ],
+        "Категория": [
+            "Супермаркеты",
+            "Супермаркеты",
+            "Переводы",
+            "Фастфуд",
+            "Фастфуд",
+            "Каршеринг",
+            "Константин Л.",
+            "Константин Л.",
+        ],
+    }
+    return pd.DataFrame(data)
+
+
+@pytest.fixture
+def mock_success_response() -> dict:
+    return {"Global Quote": {"05. price": "150.25"}}
+
+
+@pytest.fixture
+def mock_failed_response() -> dict:
+    return {"Error Message": "Invalid API call"}
+
+
+@pytest.fixture
+def sample_data_service() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "Дата операции": ["01.01.2023 12:00:00", "02.01.2023 13:30:00", "03.01.2023 10:15:00"],
+            "Номер карты": ["*1234", "*5678", None],
+            "Сумма операции": [100.50, 200.75, 300.25],
+            "Категория": ["Супермаркет", "Ресторан", "Транспорт"],
+            "Описание": ["Покупка в Ашане", "Ужин в ресторане", "Поездка на такси"],
+        }
+    )
