@@ -73,3 +73,14 @@ def mock_success_response():
 @pytest.fixture
 def mock_failed_response():
     return {"Error Message": "Invalid API call"}
+
+
+@pytest.fixture
+def sample_data_service():
+    return pd.DataFrame({
+        "Дата операции": ["01.01.2023 12:00:00", "02.01.2023 13:30:00", "03.01.2023 10:15:00"],
+        "Номер карты": ["*1234", "*5678", None],
+        "Сумма операции": [100.50, 200.75, 300.25],
+        "Категория": ["Супермаркет", "Ресторан", "Транспорт"],
+        "Описание": ["Покупка в Ашане", "Ужин в ресторане", "Поездка на такси"]
+    })
