@@ -1,12 +1,22 @@
 import json
+import logging
 import os
 
 from dotenv import load_dotenv
 
-from config import DATA_PATH_XLSX
+from config import DATA_PATH_XLSX, PATH
 from src.file_reader import reader_file_xlsx
 from src.utils import (get_cards_data, get_currency_rates, get_filtered_operations, get_greeting, get_stock_prices,
                        get_top_transactions, load_user_settings)
+
+logger = logging.getLogger(__name__)
+file_handler = logging.FileHandler(PATH / "logs" / "logging.log", "w", encoding="UTF-8")
+file_formatter = logging.Formatter(
+    "[%(asctime)s.%(msecs)03d] [%(levelname)-7s] - %(name)r - (%(filename)s).%(funcName)s:%(lineno)-3d - %(message)s"
+)
+file_handler.setFormatter(file_formatter)
+logger.addHandler(file_handler)
+logger.setLevel(logging.DEBUG)
 
 load_dotenv()
 
@@ -14,6 +24,7 @@ API_KEY = os.getenv("API_KEY")
 
 
 def generate_response(input_date, data):
+    logger.info("Запуск функции %s со значением %s", generate_response.__name__, input_date)
     settings = load_user_settings()
     df = get_filtered_operations(data, input_date)
 
