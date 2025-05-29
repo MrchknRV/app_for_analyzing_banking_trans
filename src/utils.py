@@ -114,7 +114,6 @@ def get_stock_prices(stocks: list, api_key=None) -> Any:
                 continue
 
             data = response.json()
-            print(data)
             if "Global Quote" not in data or "05. price" not in data["Global Quote"]:
                 logger.error("Неверная структура ответа для %s", stock)
                 prices.append({"stock": stock, "price": "Нет данных"})
@@ -140,6 +139,7 @@ def get_filtered_operations(data: pd.DataFrame, date_str: str) -> pd.DataFrame:
     logger.info("Запуск функции %s", get_filtered_operations.__name__)
     try:
         date_start, date_end = get_month_date_start_end(date_str)
+        data["Дата операции"] = pd.to_datetime(data["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         filtered_df = data[(data["Дата операции"] >= date_start) & (data["Дата операции"] <= date_end)]
         return filtered_df
     except Exception as ex:

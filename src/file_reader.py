@@ -20,7 +20,6 @@ def reader_file_xlsx(pathfile: str):
     try:
         logger.info("Считываем данные из файла %s", pathfile)
         df = pd.read_excel(pathfile, engine="openpyxl")
-        df["Дата операции"] = pd.to_datetime(df["Дата операции"], format="%d.%m.%Y %H:%M:%S")
         df["Сумма операции"] = df["Сумма операции"].astype(float).abs()
         logger.info("Функция %s успешно завершилась", reader_file_xlsx.__name__)
         return df

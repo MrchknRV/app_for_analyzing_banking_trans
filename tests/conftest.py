@@ -10,6 +10,23 @@ def mock_settings_data():
 
 
 @pytest.fixture
+def valid_excel_data():
+    return pd.DataFrame({
+        "Дата операции": ["2023-01-01", "2023-01-02"],
+        "Сумма операции": [100.50, -200.75],
+        "Категория": ["Супермаркеты", "Канцтовары"]
+    })
+
+
+@pytest.fixture
+def invalid_excel_data():
+    return pd.DataFrame({
+        "Дата": ["2023-01-01"],
+        "Amount": [100.50]
+    })
+
+
+@pytest.fixture
 def sample_data():
     data = {
         "Дата операции": [
