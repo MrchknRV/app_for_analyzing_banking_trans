@@ -64,7 +64,7 @@ def spending_by_category(data: pd.DataFrame, category: str, date: Optional[str] 
         if date is None:
             date = datetime.now()
         else:
-            date = datetime.strptime(date, "%Y-%m-%d")
+            date = datetime.strptime(date, "%Y-%m-%d %H:%M:%S")
 
         three_months = date - timedelta(days=90)
         data["Дата операции"] = pd.to_datetime(data["Дата операции"], format="%d.%m.%Y %H:%M:%S")
