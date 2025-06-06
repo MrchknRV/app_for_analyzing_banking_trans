@@ -35,7 +35,7 @@ def test_log_report_decorator_not_dataframe():
 
 
 def test_spending_success(sample_data: pd.DataFrame) -> None:
-    result = spending_by_category(sample_data, "Фастфуд", "2021-12-31")
+    result = spending_by_category(sample_data, "Фастфуд", "2021-12-31 12:12:12")
 
     assert isinstance(result, pd.DataFrame)
     assert result.loc[0, "total_expenses"] == -1446.4
@@ -59,7 +59,7 @@ def test_spending_missing_category(sample_data: pd.DataFrame) -> None:
 
 
 def test_spending_by_category_default_date(sample_data: pd.DataFrame) -> None:
-    with freeze_time("2021-12-31"):
+    with freeze_time("2021-12-31 12:12:12"):
         result = spending_by_category(sample_data, "Фастфуд")
 
         assert isinstance(result, pd.DataFrame)
